@@ -20,6 +20,7 @@ class Embed {
         if (isset($vars[0]) && !empty($vars[0])) {
             
             for($i = 0; $i < count($vars[0]); $i++) {
+
                 $init = (strpos($vars[1][$i], '.') > -1) ? explode('.',trim($vars[1][$i])) : trim($vars[1][$i]);
                 if (is_array($init)) {
                     for($l = 1; $l < count($init); $l++) {
@@ -55,7 +56,7 @@ class Embed {
 
                         // Replaces caller to display error on information
                         $file = str_replace($vars[0][$i], $this->error("$init is not set in data array", $line), $file);
-                        break;// Ends for loop execution
+                        continue; // Ends current loop and goes to next iteration
                     }
                     
                     $file = str_replace($vars[0][$i], $data[$init], $file);// Replaces file if valid data is preset
