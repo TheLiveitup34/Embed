@@ -20,7 +20,7 @@ To clone and run this repository you'll need [Git](https://git-scm.com) and a [P
 
 ```bash
 # Clone this repository
-git clone https://github.com/RKStudioTM/ChatMC
+git clone https://github.com/RKStudioTM/Embed
 
 # Call class in php 
 require_once('embed.php');
