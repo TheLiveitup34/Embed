@@ -21,7 +21,7 @@ class Embed {
 
     public function callFile($data = []) {
      
-      
+        $file = $this->file;
 
 
         if (isset($this->vars[0]) && !empty($this->vars[0])) {
@@ -39,17 +39,17 @@ class Embed {
                         $line = $this->getLine($file,$this->vars[0][$i]);
 
                         // Replaces caller to display error on information
-                        $this->file = str_replace($this->vars[0][$i], $this->error("$init[0] is not set in data array", $line), $this->file);
+                        $file = str_replace($this->vars[0][$i], $this->error("$init[0] is not set in data array", $line), $file);
                         break; // Ends for loop execution
                     }
 
                     if (!isset($data[$init[0]][$init[1]])) {
 
                         // Find the link of what the code was on
-                        $line = $this->getLine($this->file,$this->vars[0][$i]);
+                        $line = $this->getLine($file,$this->vars[0][$i]);
 
                         // Replaces caller to display error on information
-                        $this->file = str_replace($this->vars[0][$i], $this->error("Call to undefined key of $init[1] in array $init[0]", $line), $this->file);
+                        $file = str_replace($this->vars[0][$i], $this->error("Call to undefined key of $init[1] in array $init[0]", $line), $file);
                         break; // Ends for loop execution
                     }
 
@@ -61,9 +61,9 @@ class Embed {
 
                             if (!isset($origin[$init[$s]])) {
                                 
-                                $line = $this->getLine($this->file,$this->vars[0][$i]);
+                                $line = $this->getLine($file,$this->vars[0][$i]);
 
-                                $this->file = str_replace($this->vars[0][$i], $this->error("Call to undefined key of $init[$s]", $line), $this->file);
+                                $file = str_replace($this->vars[0][$i], $this->error("Call to undefined key of $init[$s]", $line), $file);
                                 break;
                             }
                             
@@ -78,11 +78,11 @@ class Embed {
                     }
 
                     if (is_array($origin)) {
-                        $line = $this->getLine($this->file,$this->vars[0][$i]);
+                        $line = $this->getLine($file,$this->vars[0][$i]);
                         $origin = $this->error("Unexpected array " . json_encode($origin), $line);
                     }
 
-                    $this->file = str_replace($this->vars[0][$i], $origin,$this->file); // Replaces this->file if valid data is preset
+                    $file = str_replace($this->vars[0][$i], $origin,$file); // Replaces file if valid data is preset
                 
 
                 } else {
@@ -90,14 +90,14 @@ class Embed {
                     if (!isset($data[$init])) {
 
                         // Find the link of what the code was on
-                        $line = $this->getLine($this->file,$this->vars[0][$i]);
+                        $line = $this->getLine($file,$this->vars[0][$i]);
 
                         // Replaces caller to display error on information
-                        $this->file = str_replace($this->vars[0][$i], $this->error("$init is not set in data array", $line), $this->file);
+                        $file = str_replace($this->vars[0][$i], $this->error("$init is not set in data array", $line), $file);
                         continue; // Ends current loop and goes to next iteration
                     }
                     
-                    $this->file = str_replace($this->vars[0][$i], $data[$init], $this->file);// Replaces this->file if valid data is preset
+                    $file = str_replace($this->vars[0][$i], $data[$init], $file);// Replaces file if valid data is preset
                 }
 
 
@@ -105,7 +105,7 @@ class Embed {
             
         }
         
-        echo $this->file; // Echos file for valid output
+        echo $file; // Echos file for valid output
         return;
 
 
