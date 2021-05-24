@@ -24,10 +24,11 @@ git clone https://github.com/RKStudioTM/Embed
 
 # Call class in php 
 require_once('embed.php');
-$embed = new Embed();
+# Loads file from Directory
+$embed = new Embed(DIRECTORY_URL_HERE);
 
-# Load File from Directory / URL 
-$embed->callFile(DIRECTORY_URL_HERE, DATA_ARRAY_HERE);
+# Calls to parse and translate data to output
+$embed->callFile(DATA_ARRAY_HERE);
 ```
 
 ## Example Data array
