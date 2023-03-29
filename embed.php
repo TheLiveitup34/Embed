@@ -6,126 +6,196 @@
 class Embed {
 
     private $file = "";
-    private $vars = "";
+    private $vars = [];
+    private $blocks = [];
     public function __construct($file) {
         if (!file_exists($file)) {
-            die("file at: $file does not exist!");
+            echo "File does not exist";
+            return false;
+       
         }
 
         $file = file_get_contents($file); // reads file from url or local directory
-        preg_match_all( '/{{(.*)}}/', $file, $vars, PREG_PATTERN_ORDER); // Checks for variable patterns of {{ VAR }}
+        $lines = explode(PHP_EOL, $file);
+        
+        // Require files and remove comments
+        foreach($lines as $line) {
+            // checks for comments of {# COMMENT #}
+            if (preg_match('/{#(.*)#}/', $line, $comments)) {
+                $file = str_replace($comments[0],"", $file);
+            }
 
+            // checks for block patterns of {& FILE &}
+           if (preg_match('/{&(.*)&}/', $line, $includes)) {
+                $includes[1] = str_replace(" ","",$includes[1]);
+
+                if (!file_exists($includes[1])) {
+                    echo "File does not exist: " . $includes[1] . PHP_EOL;
+                    return false;
+                }
+
+                $file = str_replace($includes[0],file_get_contents($includes[1]), $file);
+            }
+
+        }
+        // get updated File and lines
+        $lines = explode(PHP_EOL, $file);
+
+        $current_block = [];
+        $block_identified = false;
+        $block_name = "";
+        // Get Varialbes and store them in an array
+        foreach($lines as $key => $line) {
+            if ($block_identified == true) {
+                // echo $line . PHP_EOL;
+                if (preg_match('/{%(.*)%}/', $line, $block)) {
+                    if ("end$block_name" == strtolower(ltrim(rtrim($block[1])))) {
+
+                        $block_identified = false;
+                        $current_block['replace'] .= $line . PHP_EOL;
+                        $current_block['content'] = rtrim(ltrim($current_block['content']));
+                        array_push($this->blocks, $current_block);
+                        $current_block = [];
+                    } else {
+                        $current_block['replace'] .= $line . PHP_EOL;
+                        $current_block['content'] .= $line . PHP_EOL;
+                    }
+                    continue;
+                } else {
+                    $current_block['replace'] .= $line . PHP_EOL;
+                    $current_block['content'] .= $line . PHP_EOL;
+                    continue;
+                }
+                
+
+            }
+
+            // checks for block patterns of {% BLOCK %}
+            if (preg_match('/{%(.*)%}/', $line, $block)) {
+                $block_identified = true;
+                $block_name = strtolower(rtrim(ltrim($block[1])));
+                $block_details = explode(" ", $block_name);
+
+                // Sets the block name to the function to be called
+                $block_name = $block_details[0];
+                
+                unset($block_details[0]);
+                $block_details = array_values($block_details);
+                $block_details = implode(" ", $block_details);
+        
+                $block = [
+                    'type' => $block_name,
+                    'replace' => $line . PHP_EOL,
+                    'args' => $block_details,
+                    'content' => ""
+                ];
+                $current_block = $block;
+                continue;
+            }
+            // checks for variable patterns of {{ VAR }}
+            if (preg_match('/{{(.*)}}/', $line, $vars) && $block_identified == false) {
+                $key = rtrim(ltrim($vars[1]));
+                $var = [
+                    'key' => $vars[0],
+                    'var' => $key,
+                    'parent' => $key
+                ];
+                if (strpos($key, '.') > -1) {
+
+                    $var['order'] = explode('.', $key);
+                    $var['parent'] = $var['order'][0];
+                }
+
+                array_push($this->vars, $var);
+            }
+        }
+
+        // removes all whitespace from the beginning of the file
+        $file = ltrim($file);
+        // removes all whitespace from the end of the file
+        $file = rtrim($file);
+        // echo $file;
         $this->file = $file;
-        $this->vars = $vars;
+        return true;
     }
 
     public function callFile($data = []) {
      
-        $file = $this->file;
-
-
-        if (isset($this->vars[0]) && !empty($this->vars[0])) {
-            
-            for($i = 0; $i < count($this->vars[0]); $i++) {
-
-                $init = (strpos($this->vars[1][$i], '.') > -1) ? explode('.',trim($this->vars[1][$i])) : trim($this->vars[1][$i]);
-                
-                if (is_array($init)) {
-
-                    
-                    if (!isset($data[$init[0]])) {
-                        
-                        // Find the link of what the code was on
-                        $line = $this->getLine($file,$this->vars[0][$i]);
-
-                        // Replaces caller to display error on information
-                        $file = str_replace($this->vars[0][$i], $this->error("$init[0] is not set in data array", $line), $file);
-                        break; // Ends for loop execution
-                    }
-
-                    if (!isset($data[$init[0]][$init[1]])) {
-
-                        // Find the link of what the code was on
-                        $line = $this->getLine($file,$this->vars[0][$i]);
-
-                        // Replaces caller to display error on information
-                        $file = str_replace($this->vars[0][$i], $this->error("Call to undefined key of $init[1] in array $init[0]", $line), $file);
-                        break; // Ends for loop execution
-                    }
-
-                    $origin = $data[$init[0]][$init[1]];
-
-                    if (count($init) >= 3) {
-
-                        for($s = 2; $s < count($init); $s++) {
-
-                            if (!isset($origin[$init[$s]])) {
-                                
-                                $line = $this->getLine($file,$this->vars[0][$i]);
-
-                                $file = str_replace($this->vars[0][$i], $this->error("Call to undefined key of $init[$s]", $line), $file);
-                                break;
-                            }
-                            
-                            if (is_array($origin[$init[$s]])) {
-                                $origin = $origin[$init[$s]];
-                                continue;
-                            }
-
-                            $origin = $origin[$init[$s]];
-                        }
-
-                    }
-
-                    if (is_array($origin)) {
-                        $line = $this->getLine($file,$this->vars[0][$i]);
-                        $origin = $this->error("Unexpected array " . json_encode($origin), $line);
-                    }
-
-                    $file = str_replace($this->vars[0][$i], $origin,$file); // Replaces file if valid data is preset
-                
-
-                } else {
-
-                    if (!isset($data[$init])) {
-
-                        // Find the link of what the code was on
-                        $line = $this->getLine($file,$this->vars[0][$i]);
-
-                        // Replaces caller to display error on information
-                        $file = str_replace($this->vars[0][$i], $this->error("$init is not set in data array", $line), $file);
-                        continue; // Ends current loop and goes to next iteration
-                    }
-                    
-                    $file = str_replace($this->vars[0][$i], $data[$init], $file);// Replaces file if valid data is preset
+        // replace variables with the data
+        foreach($this->vars as $var) {
+            if (isset($var['order'])) {
+                $parent = $var['parent'];
+                $order = $var['order'];
+                unset($order[0]);
+                $order = array_values($order);
+                $value = $data[$parent];
+                foreach($order as $key) {
+                    $value = $value[$key];
                 }
-
-
+                $this->file = str_replace($var['key'], $value, $this->file);
+            } else {
+                $this->file = str_replace($var['key'], $data[$var['var']], $this->file);
             }
-            
         }
-        
-        echo $file; // Echos file for valid output
-        return;
+
+        // replace blocks with the data
+        foreach($this->blocks as $block) {
+            switch($block['type']) {
+                case 'if':
+                    // get predefined variables
+                    $defined = ["true", "false", 0, 1, "0", "1", "null", "==", "!=", ">", "<", ">=", "<=", "&&", "||", "!", "<=>", "and", "or", "xor"];
+                    $args = explode(" ", $block['args']);
+                    $vars = [];
+                    $else = "";
+                    foreach($args as $arg) {
+                        if (!in_array($arg, $defined)) {
+                            array_push($vars, $arg);
+                        }
+                    }
+                    foreach($vars as $var) {
+                        $data[$var] = ($data[$var]) ? "true" : "false";
+                        $block['args'] = str_replace($var, $data[$var], $block['args']);
+                    }
+
+     
+                    // check if the block has else statement
+                    if (preg_match('/{%(.*)else(.*)%}/', $block['content'], $elses)) {
+                        $else = explode($elses[0], $block['content']);
+                        $block['content'] = $else[0];
+                        $else = $else[1];
+                    } else {
+                        $else = "";
+                    }
 
 
-    }
+                    // check if the block should be replaced
+                    if (eval("return $block[args];")) {
+                        $this->file = str_replace($block['replace'], $block['content'], $this->file);
+                    } else {
+                        $this->file = str_replace($block['replace'], $else, $this->file);
+                    }
+                    break;
+                case "foreach":
 
-    private function getLine($file, $query) {
+                    $args = explode(" ", $block['args']);
+                    $vars = [];
+                    $else = "";
+                    $loop = $data[$args[0]];
+                    $replace = "";
+                    preg_match_all('/{{(.*)}}/', $block['content'], $keys);
+                    foreach($loop as $value) {
+                        $content = $block['content'];
+                        for($i = 0; $i < count($keys[1]); $i++) {
+                            $content = str_replace($keys[0][$i], $value[str_replace(' ', '', $keys[1][$i])], $content);
+                        }
+                        $replace .= $content;
+                    }
+                    $this->file = str_replace($block['replace'], $replace, $this->file);
 
-        $line = explode(PHP_EOL,$file); // Turns file into array
-        $codeLine = 1; // Starts at one for initial basis
-        
-        for($i = 0; $i < count($line); $i++) {
-            if (strpos($line[$i], $query) > -1) { // Checks if line of code exist on current file line
-                $codeLine += $i; // Adds current iteration with Codeline to correct iteration offset
-                break;
-            }            
+                    break;
+            }
         }
-        return $codeLine;
-    }
 
-    private function error($error, $line) {
-        return '<br> <font size="1"> <table border="1" cellspacing="0" cellpading="1"> <tbody> <tr> <th align="left" bgcolor="#f57900" colspan="5"> <span style="background-color: #cc0000; color: #fce94f; font-size: x-large;">( ! )</span> ' . $error . ' on line <i>' . $line . '</i>&nbsp; </th> </tr> </tbody> </table> </font> <br>';
+        echo $this->file;
     }
 }

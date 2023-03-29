@@ -2,55 +2,41 @@
     // Load file
     require_once('embed.php');
 
-    // Call class
-    $header = new Embed('html/header.html');
+    // Create new embed object
+    $embed = new Embed('templates/pages/index.tpl');
 
-    // Data given to parser
-    $data = [
-        "title" => "example Site",
-        "brand" => "Gallery Site"
-    ];
-
-    // Run parser
-    $header->callFile($data);
-
-
-    $card = new Embed('html/card.html');
-
-    $data = [
-        [
-            "img" => "https://picsum.photos/1000/750",
-            "name" => "Item 1"
-        ],
-        [
-            "img" => "https://picsum.photos/1000/750",
-            "name" => "Item 2"
-        ],
-        [
-            "img" => "https://picsum.photos/1000/750",
-            "name" => "Item 3"
-        ],
-        [
-            "img" => "https://picsum.photos/1000/750",
-            "name" => "Item 4"
-        ],
-        [
-            "img" => "https://picsum.photos/1000/750",
-            "name" => "Item 5"
-        ],
-        [
-            "img" => "https://picsum.photos/1000/750",
-            "name" => "Item 6"
-        ]
-        
-    ];
-
-    for($i = 0; $i < count($data); $i++) {
-        $card->callFile($data[$i]);
+    if ($embed) {
+        // Call file with data
+        $embed->callFile([
+            'login' => false,
+            'title' => 'Hello World',
+            'brand' => 'My Website',
+            'content' => 'This is a test',
+            'items' => [
+                [
+                    'name' => 'Item 1',
+                    'img' => "https://picsum.photos/1000/750?1"
+                ],
+                [
+                    'name' => 'Item 2',
+                    'img' => "https://picsum.photos/1000/750?2"
+                ],
+                [
+                    'name' => 'Item 3',
+                    'img' => "https://picsum.photos/1000/750?3"
+                ],
+                [
+                    'name' => 'Item 4',
+                    'img' => "https://picsum.photos/1000/750?4"
+                ],
+                [
+                    'name' => 'Item 5',
+                    'img' => "https://picsum.photos/1000/750?5"
+                ],
+                [
+                    'name' => 'Item 6',
+                    'img' => "https://picsum.photos/1000/750?6"
+                ]
+            ]
+        ]);
     }
-
-    $footer = new Embed('html/footer.html');
-
-    $data = [];
-
-    $footer->callFile($data);

@@ -41,25 +41,6 @@ $data = [
 # Called on output file as such
 {{ title }}
 ```
-Data can be called in multiple arrays using . as a way to define child arrays
-
-## Example Sub array
-```bash
-# Data can be as such
-$data = [
-    "user" => [
-        "first_name" => "John",
-        "last_name" => "Doe",
-        "age" => 24
-    ] 
-];
-
-# Called on output file as such
-{{ user.first_name }}
-{{ user.last_name }}
-{{ user.age }}
-```
-
 
 ## License
 
