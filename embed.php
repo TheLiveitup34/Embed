@@ -8,14 +8,14 @@ class Embed {
     private $file = "";
     private $vars = [];
     private $blocks = [];
-    public function __construct($file) {
-        if (!file_exists($file)) {
+    public function __construct($file, $path = "") {
+        if (!file_exists($path . $file)) {
             echo "File does not exist";
             return false;
        
         }
 
-        $file = file_get_contents($file); // reads file from url or local directory
+        $file = file_get_contents($path . $file); // reads file from url or local directory
         $lines = explode(PHP_EOL, $file);
         
         // Require files and remove comments
@@ -28,13 +28,12 @@ class Embed {
             // checks for block patterns of {& FILE &}
            if (preg_match('/{&(.*)&}/', $line, $includes)) {
                 $includes[1] = str_replace(" ","",$includes[1]);
-
-                if (!file_exists($includes[1])) {
+                if (!file_exists($path . $includes[1])) {
                     echo "File does not exist: " . $includes[1] . PHP_EOL;
                     return false;
                 }
 
-                $file = str_replace($includes[0],file_get_contents($includes[1]), $file);
+                $file = str_replace($includes[0],file_get_contents($path . $includes[1]), $file);
             }
 
         }
@@ -143,18 +142,40 @@ class Embed {
             switch($block['type']) {
                 case 'if':
                     // get predefined variables
-                    $defined = ["true", "false", 0, 1, "0", "1", "null", "==", "!=", ">", "<", ">=", "<=", "&&", "||", "!", "<=>", "and", "or", "xor"];
+                    $defined = ["true", "false", "null", "==", "!=", ">", "<", ">=", "%", "<=", "&&", "||", "!", "<=>", "and", "or", "xor"];
+                    $operators = ["==", "!=", ">", "<", ">=", "%", "<=", "&&", "||", "!", "<=>", "and", "or", "xor"];
                     $args = explode(" ", $block['args']);
                     $vars = [];
                     $else = "";
+                    $operator = "";
+                    $output = "";
+
+                    // get the variables and operators
                     foreach($args as $arg) {
+                        // check if the argument is an operator
+                        if (in_array($arg, $operators)) {
+                            $operator = $arg;
+                        }
+                        // check if the argument is a variable
                         if (!in_array($arg, $defined)) {
                             array_push($vars, $arg);
                         }
                     }
                     foreach($vars as $var) {
-                        $data[$var] = ($data[$var]) ? "true" : "false";
-                        $block['args'] = str_replace($var, $data[$var], $block['args']);
+
+                        // check if the variable is a digit
+                        if (is_numeric($var)) {
+                            $var = (int)$var;
+                        }
+
+                        // check if the variable is a boolean
+                        if (strpos("true", $var) > -1 || strpos("false", $var) > -1) {
+                            $var = ($var) ? true : false;
+                        }
+                        if (isset($data[$var])) {
+
+                            $block['args'] = str_replace($var, $data[$var], $block['args']);
+                        }
                     }
 
      
@@ -167,16 +188,58 @@ class Embed {
                         $else = "";
                     }
 
+                    $args = explode($operator, str_replace(' ','',$block['args']));
+                    switch($operator) {
+                        case "==":
+                            $output = ($args[0] == $args[1]) ? true : false;
+                        break;
+                        case "!=":
+                            $output = ($args[0] != $args[1]) ? true : false;
+                        break;
+                        case ">":
+                            $output = ($args[0] > $args[1]) ? true : false;
+                        break;
+                        case "<":
+                            $output = ($args[0] < $args[1]) ? true : false;
+                        break;
+                        case ">=":
+                            $output = ($args[0] >= $args[1]) ? true : false;
+                        break;
+                        case "<=":
+                            $output = ($args[0] <= $args[1]) ? true : false;
+                        break;
+                        case "&&":
+                            $output = ($args[0] && $args[1]) ? true : false;
+                        break;
+                        case "||":
+                            $output = ($args[0] || $args[1]) ? true : false;
+                        break;
+                        case "!":
+                            $output = (!$args[0]) ? true : false;
+                        break;
+                        case "<=>":
+                            $output = ($args[0] <=> $args[1]) ? true : false;
+                        break;
+                        case "and":
+                            $output = ($args[0] and $args[1]) ? true : false;
+                        break;
+                        case "or":
+                            $output = ($args[0] or $args[1]) ? true : false;
+                        break;
+                        case "xor":
+                            $output = ($args[0] xor $args[1]) ? true : false;
+                        break;
+                    }
 
                     // check if the block should be replaced
-                    if (eval("return $block[args];")) {
+                    if ($output) {
                         $this->file = str_replace($block['replace'], $block['content'], $this->file);
                     } else {
                         $this->file = str_replace($block['replace'], $else, $this->file);
                     }
+                    
                     break;
                 case "foreach":
-
                     $args = explode(" ", $block['args']);
                     $vars = [];
                     $else = "";
